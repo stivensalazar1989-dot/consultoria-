@@ -1,0 +1,507 @@
+DROP DATABASE IF EXISTS consultoria;
+CREATE DATABASE consultoria;
+USE consultoria;
+
+
+CREATE TABLE Cliente_tipo (
+    ID INT NOT NULL AUTO_INCREMENT, 
+    descripcion VARCHAR(40) NOT NULL UNIQUE, 
+    PRIMARY KEY (ID)
+);
+
+
+
+CREATE TABLE sector_actividad (
+    ID_sector INT NOT NULL AUTO_INCREMENT,
+    nombre_sector VARCHAR(50) NOT NULL,
+    descripcion VARCHAR(100) NULL,
+    PRIMARY KEY (ID_sector)
+);
+
+CREATE TABLE Idioma (
+    ID_idioma INT NOT NULL AUTO_INCREMENT,
+    nombre_idioma VARCHAR(50) NOT NULL,
+    PRIMARY KEY (ID_idioma)
+);
+
+CREATE TABLE servicio_categoria (
+    categoria_id INT NOT NULL AUTO_INCREMENT,
+    descripcion VARCHAR(100) NOT NULL
+        CHECK (descripcion IN ('estrategia', 'transformacion', 'auditoria')),
+    PRIMARY KEY (categoria_id)
+);
+
+CREATE TABLE entregable_tipo (
+    ID_tipo INT NOT NULL AUTO_INCREMENT,
+    descripcion VARCHAR(100) NOT NULL
+        CHECK (descripcion IN ('informe', 'presentacion', 'modelo', 'implementacion')),
+    PRIMARY KEY (ID_tipo)
+);
+
+CREATE TABLE conocimiento_tipo (
+    tipo_ID INT NOT NULL AUTO_INCREMENT,
+    descripcion VARCHAR(100) UNIQUE NOT NULL,
+    PRIMARY KEY (tipo_ID)
+);
+
+
+
+CREATE TABLE Consultores (
+    ID INT NOT NULL AUTO_INCREMENT,
+    especialidad_id VARCHAR(100),
+    nombres VARCHAR(50) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    DNI VARCHAR(15) UNIQUE NOT NULL,
+    formacion_academica VARCHAR(200) NOT NULL,
+    certificaciones VARCHAR(50) NOT NULL,
+    anios_experiencia INT NOT NULL,
+    nivel_firma VARCHAR(50) NOT NULL DEFAULT 'junior'
+        CHECK (nivel_firma IN ('junior', 'senior', 'gerente', 'socio')),
+    tarifa_horaria DECIMAL(10,2) NOT NULL,
+    disponibilidad VARCHAR(100) NOT NULL,
+    PRIMARY KEY (ID)
+);
+    
+    
+CREATE TABLE Especialidad (
+    ID INT NOT NULL AUTO_INCREMENT,
+    nombre_especialidad VARCHAR(100) NOT NULL
+        CHECK (nombre_especialidad IN ('estrategia', 'finanzas', 'operaciones', 'marketing', 'RRHH')),
+    descripcion VARCHAR(100),
+    PRIMARY KEY (ID)
+);
+
+-- Tabla intermedia con FKs correctas
+CREATE TABLE Consultores_especialidad (
+    ID INT NOT NULL,
+    especialidad_id INT NOT NULL,
+    fecha_asignacion DATE NOT NULL DEFAULT (CURRENT_DATE),
+    PRIMARY KEY (ID, especialidad_id),
+    FOREIGN KEY (ID) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (especialidad_id) REFERENCES Especialidad(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE Consultores_idioma (
+    ID_consultor INT NOT NULL,
+    ID_idioma INT NOT NULL,
+    nivel_profesional VARCHAR(50) NOT NULL DEFAULT 'intermedio'
+        CHECK (nivel_profesional IN ('basico', 'intermedio', 'avanzado')),
+    certificado VARCHAR(100) NULL,
+    PRIMARY KEY (ID_consultor, ID_idioma),
+    FOREIGN KEY (ID_consultor) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_idioma) REFERENCES Idioma(ID_idioma)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE servicio (
+    id_servicio INT NOT NULL AUTO_INCREMENT,
+    nombre_servicio VARCHAR(100) NOT NULL,
+    categoria_ID INT NOT NULL,
+    descripcion_detallada VARCHAR(200) NOT NULL,
+    metodologia VARCHAR(200) NOT NULL,
+    beneficios VARCHAR(100) NOT NULL,
+    equipo_minimo VARCHAR(200) NOT NULL,
+    tarifario_referencial DECIMAL(10,2) NOT NULL,
+    casos_exitosos VARCHAR(5) NOT NULL,
+    PRIMARY KEY (id_servicio),
+    FOREIGN KEY (categoria_ID) REFERENCES servicio_categoria(categoria_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE Cliente (
+    ID INT NOT NULL AUTO_INCREMENT,
+    tipo_id INT NOT NULL,
+    razon_social VARCHAR(100) NOT NULL,
+    sector_actividad_id INT NOT NULL,
+    RUC VARCHAR(20) NOT NULL UNIQUE,
+    correo_contacto VARCHAR(100) NOT NULL UNIQUE,
+    direccion VARCHAR(100) NULL,
+    telefono VARCHAR(11) NULL,
+    sitio_web VARCHAR(100) NULL,
+    contacto_principal VARCHAR(100) NOT NULL,
+    cargo_contacto VARCHAR(50) NULL,
+    telefono_directo VARCHAR(30) NULL,
+    fecha_primera_relacion DATE DEFAULT (CURRENT_DATE),
+    origen_contacto VARCHAR(100) NOT NULL DEFAULT 'otro',
+    clasificacion_potencial INT NOT NULL DEFAULT 2,
+    PRIMARY KEY (ID),
+    FOREIGN KEY (tipo_id) REFERENCES Cliente_tipo(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (sector_actividad_id) REFERENCES sector_actividad(ID_sector)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+CREATE TABLE proyecto (
+    ID_proyecto INT NOT NULL AUTO_INCREMENT,
+    titulo VARCHAR(150) NOT NULL,
+    ID_cliente INT NOT NULL,
+    ID_servicio INT NOT NULL,
+    alcance VARCHAR(50) NOT NULL,
+    objetivos VARCHAR(50) NOT NULL,
+    fecha_inicio DATE NOT NULL DEFAULT CURRENT_DATE,
+    duracion_prevista INT(5) NOT NULL,
+    presupuesto_aprobado DECIMAL(10,2) NOT NULL,
+    estado_actual VARCHAR(50) NOT NULL DEFAULT 'planificado'
+        CHECK (estado_actual IN ('planificado', 'en progreso', 'completado', 'pausado', 'cancelado')),
+    nivel_confidencialidad VARCHAR(50) NOT NULL
+        CHECK (nivel_confidencialidad IN ('bajo', 'medio', 'alto')),
+    PRIMARY KEY (ID_proyecto),
+    FOREIGN KEY (ID_cliente) REFERENCES Cliente(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_servicio) REFERENCES servicio(id_servicio)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE proyecto_consultores (
+    ID_proyecto INT NOT NULL,
+    ID_consultores INT NOT NULL,
+    rol VARCHAR(50) NOT NULL DEFAULT 'analista'
+        CHECK (rol IN ('lider', 'analista', 'especialista', 'asesor')),
+    dedication DECIMAL(5,2) NOT NULL,
+    fecha_asignacion DATE NOT NULL DEFAULT (CURRENT_DATE),
+    PRIMARY KEY (ID_proyecto, ID_consultores),
+    FOREIGN KEY (ID_proyecto) REFERENCES proyecto(ID_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_consultores) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE fase_proyecto (
+    id_fase INT NOT NULL AUTO_INCREMENT,
+    ID_proyecto INT NOT NULL,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT NOT NULL,
+    fecha_inicio_planificada DATE NOT NULL DEFAULT (CURRENT_DATE),
+    fecha_inicio_real DATE NOT NULL DEFAULT (CURRENT_DATE),
+    fecha_fin_planificada DATE NOT NULL DEFAULT (CURRENT_DATE),
+    fecha_fin_real DATE NOT NULL DEFAULT (CURRENT_DATE),
+    responsable INT NOT NULL,
+    esfuerzo_estimado_horas DECIMAL(6,2) NOT NULL,
+    porcentaje_avance DECIMAL(5,2) NOT NULL
+        CHECK (porcentaje_avance >= 0.00 AND porcentaje_avance <= 100.00),
+    PRIMARY KEY (id_fase),
+    FOREIGN KEY (ID_proyecto) REFERENCES proyecto(ID_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (responsable) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE propuestas (
+    ID_propuestas INT NOT NULL AUTO_INCREMENT,
+    fecha_presentacion DATE NOT NULL DEFAULT (CURRENT_DATE),
+    ID_cliente INT NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    inversion_requerida DECIMAL(10,2) NOT NULL,
+    condiciones_comerciales TEXT NOT NULL,
+    validez_oferta DATE NOT NULL DEFAULT (CURRENT_DATE),
+    estado VARCHAR(50) NOT NULL DEFAULT 'en evaluacion'
+        CHECK (estado IN ('enviada', 'en evaluacion', 'aceptada', 'rechazada')),
+    PRIMARY KEY (ID_propuestas),
+    FOREIGN KEY (ID_cliente) REFERENCES Cliente(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE propuesta_servicio (
+    ID_propuesta INT NOT NULL,
+    ID_servicio INT NOT NULL,
+    detalle_servicio TEXT NOT NULL,
+    precio_referencial DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (ID_propuesta, ID_servicio),
+    FOREIGN KEY (ID_propuesta) REFERENCES propuestas(ID_propuestas)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_servicio) REFERENCES servicio(id_servicio)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE Entregable (
+    ID_entregable INT NOT NULL AUTO_INCREMENT,
+    ID_proyecto INT NOT NULL,
+    ID_fases INT NOT NULL,
+    titulo VARCHAR(100) NOT NULL,
+    tipo_id INT NOT NULL,
+    descripcion VARCHAR(150) NOT NULL,
+    autor_principal INT NOT NULL,
+    colaboradores TEXT NOT NULL,
+    fecha_entrega_planificada DATE NOT NULL DEFAULT (CURRENT_DATE),
+    fecha_entrega_real DATE NOT NULL DEFAULT (CURRENT_DATE),
+    estado_revision VARCHAR(50) NOT NULL DEFAULT 'pendiente'
+        CHECK (estado_revision IN ('pendiente', 'en revision', 'aprobado', 'rechazado')),
+    version_actual VARCHAR(20) NOT NULL,
+    aprobacion_cliente BOOLEAN NOT NULL,
+    PRIMARY KEY (ID_entregable),
+    FOREIGN KEY (ID_proyecto) REFERENCES proyecto(ID_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_fases) REFERENCES fase_proyecto(id_fase)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (tipo_id) REFERENCES entregable_tipo(ID_tipo)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (autor_principal) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Horas_trabajadas (
+    ID INT NOT NULL AUTO_INCREMENT,
+    ID_consultor INT NOT NULL,
+    ID_proyecto INT NOT NULL,
+    ID_fase INT NOT NULL,
+    fecha DATE NOT NULL DEFAULT (CURRENT_DATE),
+    actividad_realizada VARCHAR(200) NOT NULL,
+    horas_dedicadas DECIMAL(6,2) NOT NULL,
+    lugar_trabajo VARCHAR(50) NOT NULL
+        CHECK (lugar_trabajo IN ('oficina', 'cliente', 'remoto')),
+    descripcion_detallada VARCHAR(200) NOT NULL,
+    resultados_obtenidos VARCHAR(200) NOT NULL,
+    dificultades VARCHAR(150) NOT NULL,
+    horas_facturables DECIMAL(6,2) NOT NULL,
+    PRIMARY KEY (ID),
+    FOREIGN KEY (ID_consultor) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_proyecto) REFERENCES proyecto(ID_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_fase) REFERENCES fase_proyecto(id_fase)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE factura (
+    ID_factura INT NOT NULL AUTO_INCREMENT,
+    fecha DATE NOT NULL DEFAULT (CURRENT_DATE),
+    ID_cliente INT NOT NULL,
+    ID_proyecto INT NOT NULL,
+    periodo_facturado VARCHAR(50) NOT NULL,
+    total DECIMAL(10,2) NOT NULL,
+    condiciones_pago VARCHAR(50) NOT NULL,
+    estado VARCHAR(50) NOT NULL
+        CHECK (estado IN ('pendiente', 'pagada', 'anulada')),
+    PRIMARY KEY (ID_factura),
+    FOREIGN KEY (ID_cliente) REFERENCES Cliente(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_proyecto) REFERENCES proyecto(ID_proyecto)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE factura_linea (
+    ID_factura INT NOT NULL,
+    linea_num INT NOT NULL,
+    ID_servicio INT NOT NULL,
+    descripcion VARCHAR(150) NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    gastos_reembolsables DECIMAL(10,2) NOT NULL,
+    descuentos DECIMAL(10,2) NOT NULL,
+    PRIMARY KEY (ID_factura, linea_num),
+    FOREIGN KEY (ID_factura) REFERENCES factura(ID_factura)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (ID_servicio) REFERENCES servicio(id_servicio)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+
+CREATE TABLE conocimiento (
+    ID_conocimiento INT NOT NULL AUTO_INCREMENT,
+    codigo_tematico VARCHAR(50) NOT NULL,
+    titulo VARCHAR(150) NOT NULL,
+    tipo_ID INT NOT NULL,
+    industria_relacionada VARCHAR(100) NOT NULL,
+    autor INT NOT NULL,
+    fecha_creacion DATE NOT NULL DEFAULT (CURRENT_DATE),
+    descripcion VARCHAR(200) NOT NULL,
+    palabras_clave VARCHAR(200) NOT NULL,
+    archivo_adjunto VARCHAR(200) NOT NULL,
+    nivel_acceso VARCHAR(50) NOT NULL DEFAULT 'restringido'
+        CHECK (nivel_acceso IN ('publico', 'restringido', 'privado')),
+    potencial_reutilizacion VARCHAR(50) NOT NULL DEFAULT 'medio'
+        CHECK (potencial_reutilizacion IN ('alto', 'medio', 'bajo')),
+    PRIMARY KEY (ID_conocimiento),
+    FOREIGN KEY (tipo_ID) REFERENCES conocimiento_tipo(tipo_ID)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    FOREIGN KEY (autor) REFERENCES Consultores(ID)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
+-- 1️⃣ Cliente_tipo
+INSERT INTO Cliente_tipo (descripcion) VALUES
+('corporativo'),
+('pyme'),
+('startup'),
+('gobierno'),
+('ONG');
+
+-- 2️⃣ Especialidad
+INSERT INTO Especialidad (nombre_especialidad, descripcion) VALUES
+('estrategia', 'Diseño de planes estratégicos y crecimiento.'),
+('finanzas', 'Gestión de recursos financieros y análisis económico.'),
+('operaciones', 'Optimización de procesos productivos y logísticos.'),
+('marketing', 'Desarrollo de estrategias de posicionamiento y ventas.'),
+('RRHH', 'Gestión del talento humano y cultura organizacional.');
+
+-- 3️⃣ Sector_actividad
+INSERT INTO sector_actividad (nombre_sector, descripcion) VALUES
+('Tecnología', 'Empresas de software y servicios tecnológicos.'),
+('Manufactura', 'Producción y ensamble de bienes físicos.'),
+('Salud', 'Instituciones y servicios médicos.'),
+('Educación', 'Centros educativos y universidades.'),
+('Energía', 'Empresas de electricidad, petróleo y gas.');
+
+-- 4️⃣ Idioma
+INSERT INTO Idioma (nombre_idioma) VALUES
+('Español'),
+('Inglés'),
+('Francés'),
+('Alemán'),
+('Portugués');
+
+-- 5️⃣ Servicio_categoria
+INSERT INTO servicio_categoria (descripcion) VALUES
+('estrategia'),
+('transformacion'),
+('auditoria');
+
+-- 6️⃣ Entregable_tipo
+INSERT INTO entregable_tipo (descripcion) VALUES
+('informe'),
+('presentacion'),
+('modelo'),
+('implementacion');
+
+-- 7️⃣ Conocimiento_tipo
+INSERT INTO conocimiento_tipo (descripcion) VALUES
+('artículo técnico'),
+('manual interno'),
+('estudio de caso'),
+('plantilla de proyecto'),
+('guía de buenas prácticas');
+
+-- 8️⃣ Consultores
+INSERT INTO Consultores (nombres, apellidos, DNI, formacion_academica, certificaciones, anios_experiencia, nivel_firma, tarifa_horaria, disponibilidad) VALUES
+('Laura', 'Gómez Pérez', '12345678A', 'MBA en Dirección de Empresas', 'PMP', 8, 'senior', 150.00, 'disponible'),
+('Carlos', 'Ruiz López', '87654321B', 'Ingeniería Industrial', 'Lean Six Sigma', 5, 'junior', 80.00, 'disponible'),
+('Mariana', 'Torres Díaz', '45678912C', 'Economía y Finanzas', 'CPA', 10, 'gerente', 200.00, 'en proyecto'),
+('Andrés', 'Castro Méndez', '78912345D', 'Psicología Organizacional', 'Coaching Ejecutivo', 7, 'senior', 140.00, 'disponible'),
+('Sofía', 'Martínez Herrera', '14725836E', 'Marketing Digital', 'Google Ads Certified', 4, 'junior', 90.00, 'disponible');
+
+-- 9️⃣ Consultores_especialidad
+INSERT INTO Consultores_especialidad (ID, especialidad_id, fecha_asignacion)
+VALUES
+(1, 2, '2025-01-15'),  -- Ana → Finanzas
+(1, 1, '2025-02-01'),  -- Ana → Estrategia
+(2, 1, '2025-03-10'),  -- Luis → Estrategia
+(3, 3, '2025-02-20'),  -- María → Operaciones
+(4, 5, '2025-04-05'),  -- Carlos → RRHH
+(5, 2, '2025-03-01');  -- Elena → Finanzas
+
+
+-- 🔟 Consultores_idioma
+INSERT INTO Consultores_idioma (ID_consultor, ID_idioma, nivel_profesional, certificado) VALUES
+(1, 1, 'avanzado', 'DELE C1'),
+(1, 2, 'intermedio', 'TOEIC'),
+(2, 1, 'avanzado', NULL),
+(3, 2, 'avanzado', 'IELTS'),
+(4, 3, 'basico', NULL),
+(5, 1, 'avanzado', NULL);
+
+-- 11️⃣ Servicio
+INSERT INTO servicio (nombre_servicio, categoria_ID, descripcion_detallada, metodologia, beneficios, equipo_minimo, tarifario_referencial, casos_exitosos) VALUES
+('Consultoría Estratégica', 1, 'Desarrollo de estrategias corporativas integrales.', 'Design Thinking', 'Aumento de rentabilidad', '2 consultores senior', 5000.00, 'Sí'),
+('Transformación Digital', 2, 'Implementación de soluciones tecnológicas.', 'Agile Framework', 'Optimización operativa', '1 gerente y 2 técnicos', 8000.00, 'Sí'),
+('Auditoría Financiera', 3, 'Revisión de estados financieros y controles.', 'Normas NIIF', 'Transparencia financiera', '1 auditor líder', 4000.00, 'No');
+
+-- 12️⃣ Cliente
+INSERT INTO Cliente (tipo_id, razon_social, sector_actividad_id, RUC, correo_contacto, direccion, telefono, sitio_web, contacto_principal, cargo_contacto, telefono_directo, origen_contacto, clasificacion_potencial)
+VALUES
+(1, 'TechCorp S.A.', 1, '900123456-7', 'contacto@techcorp.com', 'Av. 10 #23-45', '3104567890', 'www.techcorp.com', 'Ana Pérez', 'Gerente General', '3207896541', 'referido', 1),
+(2, 'EcoManufactura Ltda.', 2, '800987654-3', 'info@ecomanu.com', 'Calle 15 #45-23', '3201234567', 'www.ecomanu.com', 'Luis Torres', 'Director de Producción', '3109988776', 'evento', 2),
+(3, 'SaludTotal IPS', 3, '900654321-9', 'contacto@saludtotal.com', 'Cra. 45 #21-09', '3112345678', 'www.saludtotal.com', 'María López', 'Directora Médica', '3118765432', 'web', 1);
+
+-- 13️⃣ Proyecto
+INSERT INTO proyecto (titulo, ID_cliente, ID_servicio, alcance, objetivos, duracion_prevista, presupuesto_aprobado, estado_actual, nivel_confidencialidad)
+VALUES
+('Plan Estratégico 2025', 1, 1, 'Empresa completa', 'Definir objetivos de crecimiento', 120, 25000.00, 'en progreso', 'medio'),
+('Implementación ERP', 2, 2, 'Área operativa', 'Automatizar procesos', 180, 40000.00, 'planificado', 'alto'),
+('Auditoría Interna 2025', 3, 3, 'Finanzas', 'Evaluar controles internos', 90, 15000.00, 'planificado', 'medio');
+
+-- 14️⃣ Proyecto_consultores
+INSERT INTO proyecto_consultores (ID_proyecto, ID_consultores, rol, dedication) VALUES
+(1, 1, 'lider', 100.00),
+(1, 2, 'analista', 80.00),
+(2, 3, 'lider', 100.00),
+(3, 4, 'asesor', 60.00),
+(3, 5, 'analista', 70.00);
+
+-- 15️⃣ Fase_proyecto
+INSERT INTO fase_proyecto (ID_proyecto, nombre, descripcion, responsable, esfuerzo_estimado_horas, porcentaje_avance)
+VALUES
+(1, 'Diagnóstico', 'Análisis de situación actual', 1, 100.00, 50.00),
+(1, 'Estrategia', 'Diseño de la nueva estrategia', 2, 120.00, 30.00),
+(2, 'Configuración', 'Instalación del ERP', 3, 200.00, 10.00),
+(3, 'Revisión Documental', 'Auditoría de procesos', 4, 80.00, 20.00);
+
+-- 16️⃣ Propuestas
+INSERT INTO propuestas (ID_cliente, titulo, inversion_requerida, condiciones_comerciales, validez_oferta, estado)
+VALUES
+(1, 'Propuesta de Crecimiento 2025', 20000.00, 'Pago 50% inicial, 50% contra entrega.', DATE_ADD(CURDATE(), INTERVAL 30 DAY), 'aceptada'),
+(2, 'Transformación Lean', 15000.00, 'Pago único al cierre del proyecto.', DATE_ADD(CURDATE(), INTERVAL 45 DAY), 'en evaluacion'),
+(3, 'Auditoría de Cumplimiento', 12000.00, 'Pago en 2 cuotas mensuales.', DATE_ADD(CURDATE(), INTERVAL 15 DAY), 'enviada');
+
+-- 17️⃣ Propuesta_servicio
+INSERT INTO propuesta_servicio (ID_propuesta, ID_servicio, detalle_servicio, precio_referencial)
+VALUES
+(1, 1, 'Análisis estratégico integral', 18000.00),
+(2, 2, 'Transformación operativa y digital', 15000.00),
+(3, 3, 'Auditoría de procesos financieros', 12000.00);
+
+-- 18️⃣ Entregable
+INSERT INTO Entregable (ID_proyecto, ID_fases, titulo, tipo_id, descripcion, autor_principal, colaboradores, version_actual, aprobacion_cliente)
+VALUES
+(1, 1, 'Informe Diagnóstico', 1, 'Resultados del análisis inicial', 1, 'Carlos Ruiz', 'v1.0', TRUE),
+(1, 2, 'Presentación Estrategia', 2, 'Propuesta de plan estratégico', 2, 'Laura Gómez', 'v1.1', FALSE),
+(2, 3, 'Modelo ERP', 3, 'Configuración base del sistema', 3, 'Sofía Martínez', 'v1.0', FALSE);
+
+-- 19️⃣ Horas_trabajadas
+INSERT INTO Horas_trabajadas (ID_consultor, ID_proyecto, ID_fase, actividad_realizada, horas_dedicadas, lugar_trabajo, descripcion_detallada, resultados_obtenidos, dificultades, horas_facturables)
+VALUES
+(1, 1, 1, 'Análisis de datos', 8.00, 'oficina', 'Procesamiento de información', 'Datos consolidados', 'Falta de tiempo', 8.00),
+(2, 1, 2, 'Diseño de estrategia', 6.00, 'remoto', 'Preparación de propuesta', 'Propuesta base lista', 'Coordinación con cliente', 5.00),
+(3, 2, 3, 'Configuración inicial ERP', 10.00, 'cliente', 'Instalación y ajustes', 'Sistema operativo', 'Retrasos de hardware', 9.00);
+
+-- 20️⃣ Factura
+INSERT INTO factura (ID_cliente, ID_proyecto, periodo_facturado, total, condiciones_pago, estado)
+VALUES
+(1, 1, 'Enero 2025', 12000.00, '30 días', 'pagada'),
+(2, 2, 'Febrero 2025', 8000.00, '15 días', 'pendiente'),
+(3, 3, 'Marzo 2025', 4000.00, '30 días', 'pendiente');
+
+-- 21️⃣ Factura_linea
+INSERT INTO factura_linea (ID_factura, linea_num, ID_servicio, descripcion, cantidad, precio_unitario, subtotal, gastos_reembolsables, descuentos)
+VALUES
+(1, 1, 1, 'Consultoría Estratégica', 1.00, 12000.00, 12000.00, 0.00, 0.00),
+(2, 1, 2, 'Transformación Digital', 1.00, 8000.00, 8000.00, 0.00, 0.00),
+(3, 1, 3, 'Auditoría Financiera', 1.00, 4000.00, 4000.00, 0.00, 0.00);
+
+-- 22️⃣ Conocimiento
+INSERT INTO conocimiento (codigo_tematico, titulo, tipo_ID, industria_relacionada, autor, descripcion, palabras_clave, archivo_adjunto)
+VALUES
+('KN001', 'Estrategias de Expansión Global', 1, 'Tecnología', 1, 'Análisis de casos exitosos de internacionalización.', 'estrategia, expansión, globalización', 'expansion_global.pdf'),
+('KN002', 'Plantilla Auditoría NIIF', 4, 'Finanzas', 3, 'Formato base para revisiones financieras.', 'auditoría, finanzas, NIIF', 'plantilla_auditoria.xlsx'),
+('KN003', 'Guía de Transformación Digital', 5, 'Manufactura', 2, 'Guía paso a paso de digitalización industrial.', 'transformacion, digital, industria', 'guia_digital.pdf');
+
+
+ 
+
+
